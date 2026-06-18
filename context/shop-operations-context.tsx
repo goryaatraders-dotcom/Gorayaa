@@ -423,6 +423,7 @@ export function ShopOperationsProvider({ children }: { children: ReactNode }) {
         addSupplier,
         supplierSummaries,
         pendingCodTotal,
+        refreshOrders,
       }}
     >
       {children}

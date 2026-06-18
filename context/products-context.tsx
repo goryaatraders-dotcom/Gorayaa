@@ -16,7 +16,7 @@ function mergeSeedImages(list: Product[]): Product[] {
   const seedById = Object.fromEntries(seedProducts.map((p) => [p.id, p]))
   return list.map((p) => {
     const seed = seedById[p.id]
-    const staleLocal = !p.image || p.image.startsWith("/products/")
+    const staleLocal = !p.image || p.image.startsWith("/products/") || p.image.includes("unsplash.com")
     return staleLocal && seed ? { ...p, image: seed.image } : p
   })
 }
@@ -144,7 +144,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
-  const adjustProductStock = useCallback(async (productId: string, delta: number) => {
+  const adjustProductStock = useCallback((productId: string, delta: number) => {
     let ok = false
     setProducts((prev) => {
       const target = prev.find(p => p.id === productId)

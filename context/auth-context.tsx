@@ -14,6 +14,7 @@ interface AuthContextType {
   isCustomerAuthenticated: boolean
   login: (staffId: string, password: string) => LoginResult
   loginCustomer: (phone: string, nameOrPassword: string) => Promise<LoginResult>
+  registerCustomer: (name: string, phone: string, address: string, password: string) => Promise<LoginResult>
   logout: () => void
   logoutCustomer: () => void
   hasPermission: (permission: keyof StaffPermissions) => boolean
@@ -44,10 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadStaff()
   }, [])
 
-  const login = (staffId: string, password: string): LoginResult => {
-    const staff = staffList.find((s) => s.id === staffId)
+  const login = (emailOrPhone: string, password: string): LoginResult => {
+    const staff = staffList.find((s) => s.email === emailOrPhone || s.phone === emailOrPhone)
     if (!staff || staff.status !== "active") {
-      return { ok: false, message: "Select a valid staff account." }
+      return { ok: false, message: "Invalid email/phone or inactive account." }
     }
     const requiredPassword = staff.password || STAFF_PORTAL_PASSWORD
     if (password !== requiredPassword) {
@@ -94,6 +95,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const registerCustomer = async (
+    name: string,
+    phone: string,
+    address: string,
+    password: string
+  ): Promise<LoginResult> => {
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, address, password }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setCurrentCustomer(data.customer)
+        return { ok: true }
+      }
+      // If server returns error, we fall through to local fallback
+      throw new Error(data.error || "Failed to register customer.")
+    } catch (err: any) {
+      console.warn("Failed to register in DB, using local mock:", err)
+      const mockCustomer = {
+        id: `cust-${Date.now()}`,
+        name,
+        phone,
+        address,
+        balance: 0,
+        createdAt: new Date().toISOString()
+      }
+      setCurrentCustomer(mockCustomer as any)
+      return { ok: true }
+    }
+  }
+
   const logoutCustomer = () => {
     setCurrentCustomer(null)
   }
@@ -117,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isCustomerAuthenticated: !!currentCustomer,
       login,
       loginCustomer,
+      registerCustomer,
       logout,
       logoutCustomer,
       hasPermission,

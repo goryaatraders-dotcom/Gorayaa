@@ -22,7 +22,7 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 150,
     description: "Di-ammonium Phosphate - Best for crop growth and root development",
-    image: "https://images.unsplash.com/photo-1574323347407-f5fdd43100a3?w=600&h=450&fit=crop&q=80"
+    image: "/images/dap.png"
   },
   {
     id: "2",
@@ -33,7 +33,7 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 300,
     description: "High nitrogen content for lush green growth",
-    image: "https://images.unsplash.com/photo-1464226185764-9a5719008a39?w=600&h=450&fit=crop&q=80"
+    image: "/images/urea.png"
   },
   {
     id: "3",
@@ -44,7 +44,7 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 100,
     description: "Sulphate of Potash - Improves fruit quality and disease resistance",
-    image: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=600&h=450&fit=crop&q=80"
+    image: "/images/potash.jpg"
   },
   {
     id: "4",
@@ -55,7 +55,7 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 120,
     description: "Nitrogen-Phosphorus blend for balanced nutrition",
-    image: "https://images.unsplash.com/photo-1592982537447-795146426d7b?w=600&h=450&fit=crop&q=80"
+    image: "/images/np.png"
   },
   {
     id: "5",
@@ -66,7 +66,7 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 80,
     description: "CAN - Quick acting nitrogen with calcium",
-    image: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&h=450&fit=crop&q=80"
+    image: "/images/can.jpg"
   },
   {
     id: "6",
@@ -77,7 +77,7 @@ export const seedProducts: Product[] = [
     unit: "25kg Bag",
     stock: 200,
     description: "Essential micronutrient for healthy crops",
-    image: "https://images.unsplash.com/photo-1416879595882-de6d81d9f1e4?w=600&h=450&fit=crop&q=80"
+    image: "/images/zinc.png"
   },
   {
     id: "7",
@@ -88,7 +88,7 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 500,
     description: "Natural organic matter for soil health",
-    image: "https://images.unsplash.com/photo-1533777847886-39bd1df2ecc4?w=600&h=450&fit=crop&q=80"
+    image: "/images/oprganic.jfif"
   },
   {
     id: "8",
@@ -99,7 +99,29 @@ export const seedProducts: Product[] = [
     unit: "50kg Bag",
     stock: 180,
     description: "Single Super Phosphate - Economical phosphorus source",
-    image: "https://images.unsplash.com/photo-1473972726974-9ae3840e4756?w=600&h=450&fit=crop&q=80"
+    image: "/images/ssp.png"
+  },
+  {
+    id: "9",
+    name: "Ammonium Sulphate",
+    nameUrdu: "امونیم سلفیٹ",
+    category: "Nitrogen",
+    price: 4800,
+    unit: "50kg Bag",
+    stock: 110,
+    description: "Good source of nitrogen and sulphur for soil conditioning",
+    image: "/images/can.jpg"
+  },
+  {
+    id: "10",
+    name: "Boron Micronutrient",
+    nameUrdu: "بوران",
+    category: "Micronutrient",
+    price: 1800,
+    unit: "3kg Pack",
+    stock: 150,
+    description: "Essential boron micronutrient for flowering and fruit setting",
+    image: "/images/zinc.png"
   }
 ]
 
@@ -515,6 +537,7 @@ export interface StaffMember {
   role: StaffRole
   department: string
   phone: string
+  email?: string
   salary: number
   status: "active" | "inactive"
 }
@@ -607,6 +630,7 @@ export const staffMembers: StaffMember[] = [
     role: "owner",
     department: "Management",
     phone: "0300-1112233",
+    email: "goraya@gmail.com",
     salary: 0,
     status: "active",
   },
@@ -617,6 +641,7 @@ export const staffMembers: StaffMember[] = [
     role: "manager",
     department: "Management",
     phone: "0300-4445566",
+    email: "hassan@gmail.com",
     salary: 55000,
     status: "active",
   },
@@ -627,6 +652,7 @@ export const staffMembers: StaffMember[] = [
     role: "loader",
     department: "Load / Unload",
     phone: "0300-7778899",
+    email: "tariq@gmail.com",
     salary: 28000,
     status: "active",
   },
@@ -637,6 +663,7 @@ export const staffMembers: StaffMember[] = [
     role: "loader",
     department: "Load / Unload",
     phone: "0321-3344555",
+    email: "shahzad@gmail.com",
     salary: 26000,
     status: "active",
   },
@@ -647,6 +674,7 @@ export const staffMembers: StaffMember[] = [
     role: "loader",
     department: "Load / Unload",
     phone: "0333-6677888",
+    email: "nadeem@gmail.com",
     salary: 26000,
     status: "active",
   },
@@ -657,6 +685,7 @@ export const staffMembers: StaffMember[] = [
     role: "loader",
     department: "Load / Unload",
     phone: "0345-9900112",
+    email: "waseem@gmail.com",
     salary: 25000,
     status: "active",
   },
@@ -673,3 +702,123 @@ export const seedSuppliers: Supplier[] = [
   { id: "sup-1", name: "FFC Ltd", phone: "042-111-2222" },
   { id: "sup-2", name: "Fatima Fertilizer", phone: "042-333-4444" },
 ]
+
+export const seedOrders = [
+  {
+    id: "order-1",
+    createdAt: "2026-06-16T10:00:00.000Z",
+    customerName: "Muhammad Ali",
+    customerPhone: "0300-1234567",
+    customerAddress: "Village Chak 45, District Faisalabad",
+    items: [
+      {
+        product: {
+          id: "1",
+          name: "DAP Fertilizer",
+          nameUrdu: "ڈی اے پی",
+          price: 12500,
+          unit: "50kg Bag",
+        },
+        quantity: 2,
+      }
+    ],
+    total: 25000,
+    paymentMethod: "bank",
+    paymentScreenshot: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400",
+    status: "pending",
+    trackingCode: "GT-783621",
+  },
+  {
+    id: "order-2",
+    createdAt: "2026-06-15T14:30:00.000Z",
+    customerName: "Ahmad Khan",
+    customerPhone: "0321-7654321",
+    customerAddress: "Moza Khanpur, Tehsil Jhang",
+    items: [
+      {
+        product: {
+          id: "2",
+          name: "Urea",
+          nameUrdu: "یوریا",
+          price: 3200,
+          unit: "50kg Bag",
+        },
+        quantity: 5,
+      }
+    ],
+    total: 16000,
+    paymentMethod: "cash",
+    paymentScreenshot: null,
+    status: "delivered",
+    trackingCode: "GT-918237",
+  },
+  {
+    id: "order-3",
+    createdAt: "2026-06-14T11:00:00.000Z",
+    customerName: "Rashid Mehmood",
+    customerPhone: "0333-9876543",
+    customerAddress: "Village Bhalwal, District Sargodha",
+    items: [
+      {
+        product: {
+          id: "3",
+          name: "Potash (SOP)",
+          nameUrdu: "پوٹاش",
+          price: 8500,
+          unit: "50kg Bag",
+        },
+        quantity: 3,
+      }
+    ],
+    total: 25500,
+    paymentMethod: "bank",
+    paymentScreenshot: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400",
+    status: "approved",
+    trackingCode: "GT-102938",
+  },
+  {
+    id: "order-4",
+    createdAt: "2026-06-13T09:00:00.000Z",
+    customerName: "Imran Hussain",
+    customerPhone: "0345-1122334",
+    customerAddress: "Chak 120/GB, Faisalabad",
+    items: [
+      {
+        product: {
+          id: "4",
+          name: "NP Fertilizer",
+          nameUrdu: "این پی",
+          price: 9800,
+          unit: "50kg Bag",
+        },
+        quantity: 4,
+      }
+    ],
+    total: 39200,
+    paymentMethod: "cash",
+    paymentScreenshot: null,
+    status: "shipped",
+    trackingCode: "GT-543210",
+  }
+]
+
+export interface CropRate {
+  id: string
+  name: string
+  nameUrdu: string
+  rate: number
+  unit: string
+  location: string
+  trend: "up" | "down" | "stable"
+  isActive?: boolean
+  updatedAt: string
+}
+
+export const seedCropRates: CropRate[] = [
+  { id: "crop-1", name: "Wheat", nameUrdu: "گندم", rate: 3800, unit: "40kg (Maund)", location: "Faisalabad Galla Mandi", trend: "up", isActive: true, updatedAt: new Date().toISOString() },
+  { id: "crop-2", name: "Rice (Basmati)", nameUrdu: "چاول باسمتی", rate: 8500, unit: "40kg (Maund)", location: "Sargodha Mandi", trend: "stable", isActive: true, updatedAt: new Date().toISOString() },
+  { id: "crop-3", name: "Cotton", nameUrdu: "کپاس", rate: 7200, unit: "40kg (Maund)", location: "Multan Mandi", trend: "down", isActive: true, updatedAt: new Date().toISOString() },
+  { id: "crop-4", name: "Sugarcane", nameUrdu: "گنا", rate: 450, unit: "40kg (Maund)", location: "Jhang Sugar Mill Gate", trend: "up", isActive: true, updatedAt: new Date().toISOString() },
+  { id: "crop-5", name: "Maize (Corn)", nameUrdu: "مکئی", rate: 2200, unit: "40kg (Maund)", location: "Okara Mandi", trend: "stable", isActive: true, updatedAt: new Date().toISOString() }
+]
+
