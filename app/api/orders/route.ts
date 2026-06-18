@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       trackingCode,
     }
 
-    await db.collection("orders").insertOne(newOrder)
+    await db.collection("orders").insertOne(newOrder as any)
     return NextResponse.json({ ok: true, order: newOrder })
   } catch (error: any) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })

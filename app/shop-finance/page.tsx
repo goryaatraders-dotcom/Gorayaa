@@ -951,7 +951,7 @@ function ShopFinanceInner() {
                             </div>
                           </TableCell>
                           <TableCell className="max-w-[280px] text-sm text-muted-foreground">
-                            {o.items.map((i) => `${i.name} ×${i.quantity}`).join(", ")}
+                            {o.items.map((i: any) => `${i.name} ×${i.quantity}`).join(", ")}
                           </TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">Rs. {o.total.toLocaleString()}</TableCell>
                           <TableCell>

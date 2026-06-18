@@ -26,6 +26,7 @@ import { ProductImage } from "@/components/product-image"
 import { useCart } from "@/context/cart-context"
 import { useProducts } from "@/context/products-context"
 import { useShopOperations } from "@/context/shop-operations-context"
+import { useAuth } from "@/context/auth-context"
 import { customers } from "@/lib/data"
 import type { Product } from "@/lib/data"
 
@@ -33,6 +34,7 @@ function CartContent() {
   const { items, updateQuantity, clearCart, totalItems, totalPrice } = useCart()
   const { products, deductStockForOrder, adjustProductStock } = useProducts()
   const { placeCodOrder } = useShopOperations()
+  const { currentCustomer, isCustomerAuthenticated } = useAuth()
 
   const [selectedCustomer, setSelectedCustomer] = useState<string>("")
   const [orderPlaced, setOrderPlaced] = useState(false)
@@ -51,6 +53,13 @@ function CartContent() {
   const stockById = useMemo(() => Object.fromEntries(products.map((p) => [p.id, p.stock])), [products])
 
   const resolveCustomer = () => {
+    if (isCustomerAuthenticated && currentCustomer) {
+      return {
+        name: currentCustomer.name,
+        phone: currentCustomer.phone,
+        address: currentCustomer.address,
+      }
+    }
     if (selectedCustomer) {
       const c = customers.find((x) => x.id === selectedCustomer)
       if (c) return { name: c.name, phone: c.phone, address: c.address }
@@ -237,7 +246,7 @@ function CartContent() {
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
                         <div className="relative flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary">
                           <ProductImage
-                            src={item.product.image}
+                            src={item.product.image || (item.product as any).images?.[0]}
                             alt={item.product.name}
                             sizes="96px"
                           />
@@ -306,62 +315,80 @@ function CartContent() {
                   <CardTitle className="text-xl font-bold">Customer</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground">Existing customer</Label>
-                    <select
-                      className="w-full rounded-xl border border-input bg-background p-3 text-foreground"
-                      value={selectedCustomer}
-                      onChange={(e) => {
-                        setSelectedCustomer(e.target.value)
-                        if (e.target.value) {
-                          setNewCustomerName("")
-                          setNewCustomerPhone("")
-                          setNewCustomerAddress("")
-                        }
-                      }}
-                    >
-                      <option value="">Select…</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name} — {customer.phone}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Separator />
-                  <p className="text-sm text-muted-foreground">Or new customer</p>
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Name"
-                        className="h-12 rounded-xl pl-11"
-                        value={newCustomerName}
-                        onChange={(e) => {
-                          setNewCustomerName(e.target.value)
-                          if (e.target.value) setSelectedCustomer("")
-                        }}
-                      />
+                  {isCustomerAuthenticated && currentCustomer ? (
+                    <div className="space-y-3 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                      <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        Logged In Account
+                      </p>
+                      <div>
+                        <p className="text-base font-bold text-foreground">{currentCustomer.name}</p>
+                        <p className="text-sm text-muted-foreground">{currentCustomer.phone}</p>
+                        <p className="text-sm text-muted-foreground">{currentCustomer.address}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your order will be linked to your customer profile automatically.
+                      </p>
                     </div>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Phone"
-                        className="h-12 rounded-xl pl-11"
-                        value={newCustomerPhone}
-                        onChange={(e) => setNewCustomerPhone(e.target.value)}
-                      />
-                    </div>
-                    <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Address"
-                        className="h-12 rounded-xl pl-11"
-                        value={newCustomerAddress}
-                        onChange={(e) => setNewCustomerAddress(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Existing customer</Label>
+                        <select
+                          className="w-full rounded-xl border border-input bg-background p-3 text-foreground"
+                          value={selectedCustomer}
+                          onChange={(e) => {
+                            setSelectedCustomer(e.target.value)
+                            if (e.target.value) {
+                              setNewCustomerName("")
+                              setNewCustomerPhone("")
+                              setNewCustomerAddress("")
+                            }
+                          }}
+                        >
+                          <option value="">Select…</option>
+                          {customers.map((customer) => (
+                            <option key={customer.id} value={customer.id}>
+                              {customer.name} — {customer.phone}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <Separator />
+                      <p className="text-sm text-muted-foreground">Or new customer</p>
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Name"
+                            className="h-12 rounded-xl pl-11"
+                            value={newCustomerName}
+                            onChange={(e) => {
+                              setNewCustomerName(e.target.value)
+                              if (e.target.value) setSelectedCustomer("")
+                            }}
+                          />
+                        </div>
+                        <div className="relative">
+                          <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Phone"
+                            className="h-12 rounded-xl pl-11"
+                            value={newCustomerPhone}
+                            onChange={(e) => setNewCustomerPhone(e.target.value)}
+                          />
+                        </div>
+                        <div className="relative">
+                          <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Address"
+                            className="h-12 rounded-xl pl-11"
+                            value={newCustomerAddress}
+                            onChange={(e) => setNewCustomerAddress(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 

@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       bookId,
     }
 
-    await db.collection("ledgers").insertOne(newEntry)
+    await db.collection("ledgers").insertOne(newEntry as any)
     return NextResponse.json({ ok: true, entry: newEntry })
   } catch (error: any) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })

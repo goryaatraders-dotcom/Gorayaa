@@ -6,16 +6,15 @@ import Link from "next/link"
 import { 
   ArrowLeft, Users, UserCog, Truck, Crown, Phone, 
   CreditCard, Plus, Search, Building2,
-  ChevronRight, Lock, Edit2, Eye, LogOut, KeyRound, Clock, CheckCircle2, XCircle, AlertCircle, ShoppingCart, Trash2
+  Lock, Edit2, Eye, LogOut, KeyRound, Clock, CheckCircle2, XCircle, ShoppingCart, Trash2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/header"
 import { GTLogo } from "@/components/gt-logo"
 import { useAuth } from "@/context/auth-context"
@@ -23,59 +22,36 @@ import { useCart } from "@/context/cart-context"
 import { useShopFinance } from "@/context/shop-finance-context"
 import { toast } from "sonner"
 import type { StaffMember, StaffRole } from "@/lib/data"
+import { CropRatesManager } from "@/components/crop-rates-manager"
 
-const roleConfig: Record<StaffRole, { label: string, labelUrdu: string, icon: typeof Crown, color: string, bgColor: string }> = {
-  owner: { 
-    label: "Owner", 
-    labelUrdu: "مالک", 
-    icon: Crown, 
-    color: "text-amber-600", 
-    bgColor: "bg-amber-500/10 border-amber-500/20" 
-  },
-  manager: { 
-    label: "Manager", 
-    labelUrdu: "منیجر", 
-    icon: UserCog, 
-    color: "text-blue-600", 
-    bgColor: "bg-blue-500/10 border-blue-500/20" 
-  },
-  loader: { 
-    label: "Loader", 
-    labelUrdu: "لوڈر", 
-    icon: Truck, 
-    color: "text-emerald-600", 
-    bgColor: "bg-emerald-500/10 border-emerald-500/20" 
-  }
-}
-
-export default function StaffPage() {
+export default function AdminPage() {
   const { totalItems } = useCart()
-  const { currentUser, login, logout, isAuthenticated, hasPermission } = useAuth()
+  const { currentUser, login, logout, isAuthenticated } = useAuth()
   const router = useRouter()
   const { staffMoney } = useShopFinance()
-  const showMoney = hasPermission("canManageShopFinance")
 
   // Authentication inputs
-  const [loginStaffId, setLoginStaffId] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [loginError, setLoginError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  // Staff list & log states
+  // Staff list & database states
   const [staffList, setStaffList] = useState<StaffMember[]>([])
   const [dbOrders, setDbOrders] = useState<any[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [warehouseLogs, setWarehouseLogs] = useState<any[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
 
-  // Tabs structure
-  const [activeTab, setActiveTab] = useState<"staff" | "orders" | "logs">("staff")
+  // Tab navigation states
+  const [activeTab, setActiveTab] = useState<"staff" | "orders" | "logs" | "crops">("staff")
   const [searchQuery, setSearchQuery] = useState("")
   const [filterRole, setFilterRole] = useState<string>("all")
   const [orderSearch, setOrderSearch] = useState("")
   const [ordersFilterStatus, setOrdersFilterStatus] = useState("all")
   const [selectedOrderScreenshot, setSelectedOrderScreenshot] = useState<string | null>(null)
 
-  // Add Staff form states
+  // Add Staff states
   const [addStaffOpen, setAddStaffOpen] = useState(false)
   const [newStaffName, setNewStaffName] = useState("")
   const [newStaffNameUrdu, setNewStaffNameUrdu] = useState("")
@@ -84,7 +60,7 @@ export default function StaffPage() {
   const [newStaffSalary, setNewStaffSalary] = useState("")
   const [isAddingStaff, setIsAddingStaff] = useState(false)
 
-  // Edit Staff form states
+  // Edit Staff states
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [editStaffOpen, setEditStaffOpen] = useState(false)
   const [editName, setEditName] = useState("")
@@ -95,7 +71,7 @@ export default function StaffPage() {
   const [editStatus, setEditStatus] = useState<"active" | "inactive">("active")
   const [isSavingStaff, setIsSavingStaff] = useState(false)
 
-  // Warehouse logs logging form states
+  // Log loading/unloading form states
   const [logDescription, setLogDescription] = useState("")
   const [logType, setLogType] = useState<"load" | "unload">("unload")
   const [logDate, setLogDate] = useState(new Date().toISOString().slice(0, 10))
@@ -108,11 +84,14 @@ export default function StaffPage() {
         const data = await res.json()
         if (Array.isArray(data)) {
           setStaffList(data)
+          return
         }
       }
     } catch (err) {
-      console.warn("Failed to load staff list from database.")
+      console.warn("Failed to load staff list from DB, falling back to local data.")
     }
+    // Fallback to local data
+    import("@/lib/data").then(mod => setStaffList(mod.staffMembers))
   }, [])
 
   const loadDbOrders = useCallback(async () => {
@@ -123,13 +102,19 @@ export default function StaffPage() {
         const data = await res.json()
         if (Array.isArray(data)) {
           setDbOrders(data)
+          return
         }
       }
     } catch (err) {
-      console.warn("Failed to load orders from database.")
+      console.warn("Failed to load orders from DB, falling back to local data.")
     } finally {
       setOrdersLoading(false)
     }
+    // Fallback to local data
+    import("@/lib/data").then(mod => {
+      setDbOrders(mod.seedOrders)
+      setOrdersLoading(false)
+    })
   }, [])
 
   const loadWarehouseLogs = useCallback(async () => {
@@ -140,26 +125,18 @@ export default function StaffPage() {
         const data = await res.json()
         if (Array.isArray(data)) {
           setWarehouseLogs(data.reverse())
+          return
         }
       }
     } catch (err) {
-      console.warn("Failed to load load-unload logs.")
+      console.warn("Failed to load warehouse logs from DB, falling back to local data.")
     } finally {
       setLogsLoading(false)
     }
+    // Fallback
+    setWarehouseLogs([])
+    setLogsLoading(false)
   }, [])
-
-  useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      if (currentUser.role === "loader") {
-        router.replace("/loader")
-      } else {
-        router.replace("/admin")
-      }
-    } else {
-      router.replace("/admin")
-    }
-  }, [isAuthenticated, currentUser, router])
 
   useEffect(() => {
     loadStaff()
@@ -169,13 +146,40 @@ export default function StaffPage() {
     if (isAuthenticated) {
       loadDbOrders()
       loadWarehouseLogs()
-      if (currentUser?.role === "loader") {
-        setActiveTab("orders")
+      setActiveTab("staff")
+    }
+  }, [isAuthenticated, loadDbOrders, loadWarehouseLogs])
+
+  const handleAdminLogin = (e: any) => {
+    e.preventDefault()
+    setLoginError(null)
+    setLoading(true)
+
+    // Check if the role is admin/owner or manager
+    const r = login(email.trim(), password)
+    if (!r.ok) {
+      setLoginError(r.message)
+      toast.error(r.message)
+      setLoading(false)
+      return
+    }
+
+    // Verify role restriction (only admin/owner or manager)
+    // We fetch staff to check, or rely on currentUser populated by login
+    setLoading(false)
+  }
+
+  // Effect to redirect loaders away from /admin
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      if (currentUser.role === "loader") {
+        toast.info("Redirecting you to the Loader Workspace...")
+        router.push("/loader")
       } else {
-        setActiveTab("staff")
+        toast.success(`Welcome back, ${currentUser.name}!`)
       }
     }
-  }, [isAuthenticated, currentUser, loadDbOrders, loadWarehouseLogs])
+  }, [isAuthenticated, currentUser, router])
 
   const handleAddStaff = async () => {
     if (!newStaffName.trim()) {
@@ -333,32 +337,13 @@ export default function StaffPage() {
         } else {
           toast.error(data.error || `Failed to ${action} order`)
         }
-      } else {
-        toast.error("Request failed. Please verify stocks.")
       }
     } catch (err) {
       toast.error("Network error processing order status update")
     }
   }
 
-  const handleStaffLogin = (e: any) => {
-    e.preventDefault()
-    if (!loginStaffId) {
-      setLoginError("Select a staff member")
-      return
-    }
-    const r = login(loginStaffId, loginPassword)
-    if (!r.ok) {
-      setLoginError(r.message)
-      toast.error(r.message)
-    } else {
-      setLoginPassword("")
-      setLoginError(null)
-      toast.success("Welcome back!")
-    }
-  }
-
-  // Filter lists
+  // Filter staff list
   const filteredStaff = staffList.filter(staff => {
     const matchesSearch = staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          staff.nameUrdu.includes(searchQuery) ||
@@ -367,7 +352,7 @@ export default function StaffPage() {
     return matchesSearch && matchesRole
   })
 
-  // Manager: only see loaders in directory, edit loaders only
+  // Manager filter list: view loaders, manage loaders only
   const managerFilteredStaff = staffList.filter(staff => {
     const matchesSearch = staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          staff.nameUrdu.includes(searchQuery) ||
@@ -388,11 +373,8 @@ export default function StaffPage() {
     return matchesSearch && matchesStatus
   })
 
-  // Calculations
   const totalSalary = staffList.filter(s => s.role !== "owner").reduce((sum, s) => sum + s.salary, 0)
-  const managementCount = staffList.filter(s => s.role === "owner" || s.role === "manager").length
   const loaderCount = staffList.filter(s => s.role === "loader").length
-  const pendingOrdersCount = dbOrders.filter(o => o.status === "pending").length
 
   return (
     <div className="min-h-screen bg-background">
@@ -400,65 +382,55 @@ export default function StaffPage() {
       
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Back Button */}
-        {isAuthenticated && (
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-300 mb-8 group">
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-300" />
-            Back to Shop
-          </Link>
-        )}
-
-        {/* 1. GUEST STAFF PORTAL LOGIN PAGE */}
-        {!isAuthenticated ? (
+        {/* Isolated Login Portal view when NOT logged in */}
+        {!isAuthenticated || !currentUser || currentUser.role === "loader" ? (
           <div className="max-w-md mx-auto space-y-6 py-12 animate-fade-in-up">
             <div className="flex flex-col items-center text-center">
-              <GTLogo size="lg" className="mb-4" />
-              <h1 className="text-3xl font-black text-foreground">Staff Administrative Portal</h1>
-              <p className="mt-1 text-sm text-muted-foreground uppercase tracking-widest font-bold text-emerald-800 dark:text-emerald-400">
-                Restricted Login
+              <Link href="/">
+                <GTLogo size="lg" className="mb-4 hover:scale-105 transition-transform" />
+              </Link>
+              <h1 className="text-3xl font-black text-foreground">Goraya Traders</h1>
+              <p className="mt-1 text-sm text-muted-foreground uppercase tracking-widest font-bold text-amber-600">
+                Admin & Manager Portal
               </p>
             </div>
 
-            <Card className="rounded-[2rem] border border-border bg-card shadow-2xl">
+            <Card className="rounded-[2.5rem] border border-border bg-card shadow-2xl">
               <CardHeader>
-                <CardTitle className="text-xl text-center">Sign In</CardTitle>
-                <CardDescription className="text-center">Choose your account and type credentials</CardDescription>
+                <CardTitle className="text-2xl font-bold text-center">Management Login</CardTitle>
+                <CardDescription className="text-center">Enter Gmail and password to access dashboard</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form onSubmit={handleStaffLogin} className="space-y-4">
+                <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="staff-select">Select Account</Label>
-                    <select
-                      id="staff-select"
-                      className="w-full rounded-xl border border-input bg-background p-3 text-sm text-foreground h-12"
-                      value={loginStaffId}
+                    <Label htmlFor="admin-email">Gmail Address</Label>
+                    <Input
+                      id="admin-email"
+                      type="email"
+                      placeholder="e.g. goraya@gmail.com"
+                      required
+                      className="h-12 rounded-xl"
+                      value={email}
                       onChange={(e) => {
-                        setLoginStaffId(e.target.value)
+                        setEmail(e.target.value)
                         setLoginError(null)
                       }}
-                    >
-                      <option value="">Choose your profile...</option>
-                      {staffList.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.role.toUpperCase()})
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="staff-pass">Password</Label>
+                    <Label htmlFor="admin-pass">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
-                        id="staff-pass"
+                        id="admin-pass"
                         type="password"
-                        placeholder="e.g. 1234"
+                        placeholder="••••"
                         required
                         className="pl-12 h-12 rounded-xl"
-                        value={loginPassword}
+                        value={password}
                         onChange={(e) => {
-                          setLoginPassword(e.target.value)
+                          setPassword(e.target.value)
                           setLoginError(null)
                         }}
                       />
@@ -471,90 +443,80 @@ export default function StaffPage() {
                     </p>
                   )}
 
-                  <Button type="submit" className="w-full h-12 rounded-full font-bold">
-                    Authenticate
+                  <Button type="submit" disabled={loading} className="w-full h-12 rounded-full font-bold">
+                    {loading ? "Authenticating..." : "Admin Sign In"}
                   </Button>
                 </form>
               </CardContent>
-              <div className="border-t border-border/40 p-4 bg-secondary/15 rounded-b-[2rem] text-xs text-muted-foreground">
+              <div className="border-t border-border/40 p-4 bg-secondary/15 rounded-b-[2.5rem] text-xs text-muted-foreground">
                 <details className="cursor-pointer group">
                   <summary className="font-semibold text-center select-none group-open:mb-2 hover:text-foreground transition-colors">
-                    Click to show evaluation credentials helper
+                    Click to show credentials
                   </summary>
-                  <div className="grid grid-cols-3 gap-2 border-t pt-2 text-[10px] mt-1 bg-background/50 p-2 rounded-xl">
+                  <div className="space-y-2 border-t pt-2 text-[10px] mt-1 bg-background/50 p-2 rounded-xl">
                     <div>
-                      <p className="font-bold text-amber-600">👑 Owner</p>
-                      <p className="font-medium text-foreground">Muhammad Goraya</p>
-                      <p className="font-mono bg-secondary/80 px-1.5 py-0.5 rounded w-fit mt-0.5 text-foreground">Pass: 1234</p>
+                      <p className="font-bold text-amber-600">👑 Owner (Admin)</p>
+                      <p className="text-foreground">goraya@gmail.com &bull; Pass: 1234</p>
                     </div>
                     <div>
                       <p className="font-bold text-blue-600">👤 Manager</p>
-                      <p className="font-medium text-foreground">Hassan Ali</p>
-                      <p className="font-mono bg-secondary/80 px-1.5 py-0.5 rounded w-fit mt-0.5 text-foreground">Pass: 1234</p>
-                    </div>
-                    <div>
-                      <p className="font-bold text-emerald-600">🚚 Loader</p>
-                      <p className="font-medium text-foreground">Tariq Mehmood</p>
-                      <p className="font-mono bg-secondary/80 px-1.5 py-0.5 rounded w-fit mt-0.5 text-foreground">Pass: 1234</p>
+                      <p className="text-foreground">hassan@gmail.com &bull; Pass: 1234</p>
                     </div>
                   </div>
                 </details>
               </div>
             </Card>
+
+            <div className="text-center">
+              <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-4 w-4" /> Back to Shop
+              </Link>
+            </div>
           </div>
         ) : (
           
-          /* 2. AUTHENTICATED STAFF WORKSPACE */
+          /* Authenticated Admin / Manager Workspace Dashboard View */
           <div className="space-y-8 animate-fade-in-up">
             
-            {/* Top Workspace Header Profile Bar */}
+            {/* Top profile banner */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 sm:p-8 rounded-[2rem] border border-primary/25 bg-primary/5">
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 rounded-[1.2rem] bg-foreground text-background flex items-center justify-center shadow-lg">
-                  {currentUser?.role === "owner" ? <Crown className="h-8 w-8 text-amber-500" /> :
-                   currentUser?.role === "manager" ? <UserCog className="h-8 w-8 text-blue-500" /> :
-                   <Truck className="h-8 w-8 text-emerald-500" />}
+                  {currentUser.role === "owner" ? <Crown className="h-8 w-8 text-amber-500" /> : <UserCog className="h-8 w-8 text-blue-500" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-black text-foreground">{currentUser?.name}</h2>
+                    <h2 className="text-2xl font-black text-foreground">{currentUser.name}</h2>
                     <Badge className="capitalize text-xs font-semibold rounded-full px-2.5 py-0.5">
-                      {currentUser?.role}
+                      {currentUser.role === "owner" ? "Owner (Admin)" : "Manager"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {currentUser?.department} Department &bull; {currentUser?.phone}
+                    {currentUser.department} Department &bull; {currentUser.phone} &bull; {currentUser.email}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 w-full md:w-auto">
-                {currentUser?.role !== "loader" && (
-                  <Link href="/ledger">
-                    <Button variant="outline" className="rounded-full h-11 border-primary/30 text-primary hover:bg-primary/5">
-                      Ledgers Portal
-                    </Button>
-                  </Link>
-                )}
+                <Link href="/ledger">
+                  <Button variant="outline" className="rounded-full h-11 border-primary/30 text-primary hover:bg-primary/5">
+                    Ledgers Book
+                  </Button>
+                </Link>
                 <Button variant="outline" className="rounded-full h-11 gap-2 shrink-0 border-destructive/20 text-destructive hover:bg-destructive/5" onClick={logout}>
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
+                  <LogOut className="h-4 w-4" /> Sign Out
                 </Button>
               </div>
             </div>
 
-            {/* Dashboards conditionally rendered by role */}
-
             {/* A. OWNER (ADMIN) DASHBOARD */}
-            {currentUser?.role === "owner" && (
+            {currentUser.role === "owner" && (
               <div className="space-y-8">
-                {/* Heading */}
                 <div>
                   <h1 className="text-3xl font-black text-foreground tracking-tight">👑 Owner Admin Control Panel</h1>
                   <p className="text-muted-foreground mt-1">Full administration, double-entry financial oversight, and payroll</p>
                 </div>
 
-                {/* Stats cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="rounded-2xl border">
                     <CardContent className="p-5 flex items-center justify-between">
@@ -614,24 +576,20 @@ export default function StaffPage() {
                   </Link>
                 </div>
 
-                {/* Tabs switcher */}
                 <div className="flex border-b border-border/60 gap-8">
-                  {["staff", "orders", "logs"].map((tab) => (
+                  {["staff", "orders", "logs", "crops"].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab as any)}
                       className={`pb-4 text-lg font-black capitalize tracking-tight border-b-2 transition-all ${
-                        activeTab === tab
-                          ? "border-primary text-foreground"
-                          : "border-transparent text-muted-foreground hover:text-foreground"
+                        activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {tab === "staff" ? "Staff Directory" : tab === "orders" ? "Manage Orders" : "Warehouse Movement Logs"}
+                      {tab === "staff" ? "Staff Directory" : tab === "orders" ? "Manage Orders" : tab === "logs" ? "Warehouse Movement Logs" : "Crop Rates"}
                     </button>
                   ))}
                 </div>
 
-                {/* Tab Content */}
                 {activeTab === "staff" && (
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -639,7 +597,7 @@ export default function StaffPage() {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                           type="text"
-                          placeholder="Search staff members..."
+                          placeholder="Search staff members by name..."
                           className="pl-12 h-12 rounded-xl"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
@@ -652,9 +610,10 @@ export default function StaffPage() {
                             <Plus className="h-5 w-5" /> Add New Staff
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-2xl max-w-md">
+                        <DialogContent className="rounded-2xl max-w-md bg-card">
                           <DialogHeader>
                             <DialogTitle>Add Staff Member</DialogTitle>
+                            <DialogDescription>Register a new worker profile.</DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-2">
                             <div className="space-y-1">
@@ -691,7 +650,7 @@ export default function StaffPage() {
                       </Dialog>
                     </div>
 
-                    <Card className="rounded-2xl overflow-hidden border">
+                    <Card className="rounded-2xl overflow-hidden border bg-card">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-secondary/40">
@@ -775,19 +734,20 @@ export default function StaffPage() {
                   </div>
                 )}
 
+                {activeTab === "crops" && (
+                  <CropRatesManager />
+                )}
               </div>
             )}
 
             {/* B. MANAGER DASHBOARD */}
-            {currentUser?.role === "manager" && (
+            {currentUser.role === "manager" && (
               <div className="space-y-8">
-                {/* Heading */}
                 <div>
                   <h1 className="text-3xl font-black text-foreground tracking-tight">👤 Manager Administrative Panel</h1>
                   <p className="text-muted-foreground mt-1">Manage orders, coordinate loaders, check inventory and balances</p>
                 </div>
 
-                {/* Stats cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Card className="rounded-2xl border">
                     <CardContent className="p-5 flex items-center justify-between">
@@ -810,7 +770,7 @@ export default function StaffPage() {
                   <Card className="rounded-2xl border">
                     <CardContent className="p-5 flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Recent Warehouse Movements</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Warehouse Movements</p>
                         <p className="text-2xl font-black text-foreground mt-1">{warehouseLogs.length}</p>
                       </div>
                       <Clock className="h-8 w-8 text-emerald-500" />
@@ -818,7 +778,6 @@ export default function StaffPage() {
                   </Card>
                 </div>
 
-                {/* Navigation Grid */}
                 <div className="grid grid-cols-3 gap-4">
                   <Link href="/ledger" className="block p-5 bg-card border rounded-2xl text-center hover:bg-secondary/40 hover:shadow transition">
                     <p className="text-lg font-bold text-foreground">Ledger Books</p>
@@ -834,16 +793,13 @@ export default function StaffPage() {
                   </Link>
                 </div>
 
-                {/* Tabs switcher */}
                 <div className="flex border-b border-border/60 gap-8">
                   {["staff", "orders", "logs"].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab as any)}
                       className={`pb-4 text-lg font-black capitalize tracking-tight border-b-2 transition-all ${
-                        activeTab === tab
-                          ? "border-primary text-foreground"
-                          : "border-transparent text-muted-foreground hover:text-foreground"
+                        activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {tab === "staff" ? "Loader Team" : tab === "orders" ? "Manage Orders" : "Warehouse Movement Logs"}
@@ -851,7 +807,6 @@ export default function StaffPage() {
                   ))}
                 </div>
 
-                {/* Tab content */}
                 {activeTab === "staff" && (
                   <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -872,10 +827,10 @@ export default function StaffPage() {
                             <Plus className="h-5 w-5" /> Add Loader Member
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="rounded-2xl max-w-md">
+                        <DialogContent className="rounded-2xl max-w-md bg-card">
                           <DialogHeader>
                             <DialogTitle>Add Loader Staff</DialogTitle>
-                            <DialogDescription>Add a loading worker. Manager roles can only register loader profiles.</DialogDescription>
+                            <DialogDescription>Register a new loader helper.</DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4 py-2">
                             <div className="space-y-1">
@@ -911,7 +866,7 @@ export default function StaffPage() {
                       </Dialog>
                     </div>
 
-                    <Card className="rounded-2xl overflow-hidden border">
+                    <Card className="rounded-2xl overflow-hidden border bg-card">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-secondary/40">
@@ -999,99 +954,9 @@ export default function StaffPage() {
               </div>
             )}
 
-            {/* C. LOADER WORKSPACE & DASHBOARD */}
-            {currentUser?.role === "loader" && (
-              <div className="space-y-8">
-                {/* Heading */}
-                <div>
-                  <h1 className="text-3xl font-black text-foreground tracking-tight">🚚 Loader Workspace</h1>
-                  <p className="text-muted-foreground mt-1">Fulfill physical orders, update tracking statuses, and log warehouse movements</p>
-                </div>
-
-                {/* Stats cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Card className="rounded-2xl border">
-                    <CardContent className="p-5 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Assigned Deliveries</p>
-                        <p className="text-2xl font-black text-foreground mt-1">
-                          {dbOrders.filter(o => o.status === "approved" || o.status === "shipped").length}
-                        </p>
-                      </div>
-                      <ShoppingCart className="h-8 w-8 text-primary" />
-                    </CardContent>
-                  </Card>
-                  <Card className="rounded-2xl border">
-                    <CardContent className="p-5 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase">Logs Submitted</p>
-                        <p className="text-2xl font-black text-foreground mt-1">{warehouseLogs.length}</p>
-                      </div>
-                      <Clock className="h-8 w-8 text-emerald-500" />
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Tabs switcher */}
-                <div className="flex border-b border-border/60 gap-8">
-                  <button
-                    onClick={() => setActiveTab("orders")}
-                    className={`pb-4 text-lg font-black capitalize tracking-tight border-b-2 transition-all ${
-                      activeTab === "orders" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Assigned Deliveries
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("logs")}
-                    className={`pb-4 text-lg font-black capitalize tracking-tight border-b-2 transition-all ${
-                      activeTab === "logs" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Log Warehouse Entry
-                  </button>
-                </div>
-
-                {/* Tab content */}
-                {activeTab === "orders" && (
-                  <div className="space-y-6">
-                    <OrdersManager 
-                      filteredOrders={dbOrders.filter(o => o.status === "approved" || o.status === "shipped" || o.status === "delivered")}
-                      orderSearch={orderSearch}
-                      setOrderSearch={setOrderSearch}
-                      ordersFilterStatus={ordersFilterStatus}
-                      setOrdersFilterStatus={setOrdersFilterStatus}
-                      ordersLoading={ordersLoading}
-                      handleOrderAction={handleOrderAction}
-                      setSelectedOrderScreenshot={setSelectedOrderScreenshot}
-                      isLoader={true}
-                    />
-                  </div>
-                )}
-
-                {activeTab === "logs" && (
-                  <div className="space-y-6">
-                    <WarehouseLogsManager 
-                      warehouseLogs={warehouseLogs}
-                      logsLoading={logsLoading}
-                      logDescription={logDescription}
-                      setLogDescription={setLogDescription}
-                      logType={logType}
-                      setLogType={setLogType}
-                      logDate={logDate}
-                      setLogDate={setLogDate}
-                      isAddingLog={isAddingLog}
-                      handleAddWarehouseLog={handleAddWarehouseLog}
-                      showForm={true}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Editing Staff Dialog */}
+            {/* Edit staff Dialog */}
             <Dialog open={editStaffOpen} onOpenChange={setEditStaffOpen}>
-              <DialogContent className="rounded-2xl max-w-md">
+              <DialogContent className="rounded-2xl max-w-md bg-card">
                 <DialogHeader>
                   <DialogTitle>Edit Staff Details</DialogTitle>
                 </DialogHeader>
@@ -1107,7 +972,7 @@ export default function StaffPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label>Role</Label>
-                      {currentUser?.role === "owner" ? (
+                      {currentUser.role === "owner" ? (
                         <select className="w-full border p-2 text-sm rounded bg-background" value={editRole} onChange={(e) => setEditRole(e.target.value)}>
                           <option value="owner">Owner</option>
                           <option value="manager">Manager</option>
@@ -1340,7 +1205,7 @@ function OrdersManager({
   )
 }
 
-/* Warehouse movement logs subcomponent */
+/* Warehouse movements subcomponent */
 function WarehouseLogsManager({
   warehouseLogs,
   logsLoading,

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const ledgersColl = db.collection("ledgers")
     const customersColl = db.collection("customers")
 
-    const order = await ordersColl.findOne({ _id: orderId })
+    const order = await ordersColl.findOne({ _id: orderId as any })
     if (!order) {
       return NextResponse.json({ ok: false, error: "Order not found" }, { status: 404 })
     }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
       // Check stock
       for (const item of order.items) {
-        const prod = await productsColl.findOne({ _id: item.productId })
+        const prod = await productsColl.findOne({ _id: item.productId as any })
         if (!prod || prod.stock < item.quantity) {
           return NextResponse.json({
             ok: false,
@@ -41,17 +41,19 @@ export async function POST(request: Request) {
       // Deduct stock
       for (const item of order.items) {
         await productsColl.updateOne(
-          { _id: item.productId },
+          { _id: item.productId as any },
           { $inc: { stock: -item.quantity } }
         )
       }
 
       // Find or create customer
-      let customer = await customersColl.findOne({ phone: order.customerPhone })
+      const customer = await customersColl.findOne({ phone: order.customerPhone })
       const customerId = customer ? customer._id.toString() : `c-${Date.now()}`
+      const currentBalance = customer ? (customer.balance || 0) : 0
+
       if (!customer) {
-        customer = {
-          _id: customerId,
+        const newCust = {
+          _id: customerId as any,
           id: customerId,
           name: order.customerName,
           phone: order.customerPhone,
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
           balance: 0,
           createdAt: new Date().toISOString().slice(0, 10),
         }
-        await customersColl.insertOne(customer)
+        await customersColl.insertOne(newCust as any)
       }
 
       // Create ledger entry
@@ -67,16 +69,16 @@ export async function POST(request: Request) {
       const prepaid = order.paymentMethod !== "cod"
       const debit = order.total
       const credit = prepaid ? order.total : 0
-      const newBalance = (customer.balance || 0) + (debit - credit)
+      const newBalance = currentBalance + (debit - credit)
 
       await customersColl.updateOne(
-        { _id: customerId },
+        { _id: customerId as any },
         { $set: { balance: newBalance } }
       )
 
       const ledgerEntryId = `le-${Date.now()}`
       await ledgersColl.insertOne({
-        _id: `sales-${ledgerEntryId}`,
+        _id: `sales-${ledgerEntryId}` as any,
         id: ledgerEntryId,
         customerId,
         customerName: order.customerName,
@@ -88,15 +90,15 @@ export async function POST(request: Request) {
         credit,
         balance: newBalance,
         bookId: "sales",
-      })
+      } as any)
 
-      await ordersColl.updateOne({ _id: orderId }, { $set: { status: "approved" } })
+      await ordersColl.updateOne({ _id: orderId as any }, { $set: { status: "approved" } })
 
     } else if (action === "ship") {
       if (order.status !== "approved") {
         return NextResponse.json({ ok: false, error: "Order must be approved before shipping" }, { status: 400 })
       }
-      await ordersColl.updateOne({ _id: orderId }, { $set: { status: "shipped" } })
+      await ordersColl.updateOne({ _id: orderId as any }, { $set: { status: "shipped" } })
 
     } else if (action === "deliver") {
       if (order.status !== "shipped" && order.status !== "approved") {
@@ -105,20 +107,20 @@ export async function POST(request: Request) {
 
       // If COD, record payment when delivered
       if (order.paymentMethod === "cod") {
-        let customer = await customersColl.findOne({ phone: order.customerPhone })
+        const customer = await customersColl.findOne({ phone: order.customerPhone })
         if (customer) {
           const debit = 0
           const credit = order.total
           const newBalance = (customer.balance || 0) - credit
 
           await customersColl.updateOne(
-            { _id: customer._id },
+            { _id: customer._id as any },
             { $set: { balance: newBalance } }
           )
 
           const ledgerEntryId = `le-pay-${Date.now()}`
           await ledgersColl.insertOne({
-            _id: `sales-${ledgerEntryId}`,
+            _id: `sales-${ledgerEntryId}` as any,
             id: ledgerEntryId,
             customerId: customer._id.toString(),
             customerName: order.customerName,
@@ -129,22 +131,22 @@ export async function POST(request: Request) {
             credit,
             balance: newBalance,
             bookId: "sales",
-          })
+          } as any)
         }
       }
 
-      await ordersColl.updateOne({ _id: orderId }, { $set: { status: "delivered" } })
+      await ordersColl.updateOne({ _id: orderId as any }, { $set: { status: "delivered" } })
 
     } else if (action === "cancel") {
       if (order.status === "approved" || order.status === "shipped" || order.status === "delivered") {
         for (const item of order.items) {
           await productsColl.updateOne(
-            { _id: item.productId },
+            { _id: item.productId as any },
             { $inc: { stock: item.quantity } }
           )
         }
         
-        let customer = await customersColl.findOne({ phone: order.customerPhone })
+        const customer = await customersColl.findOne({ phone: order.customerPhone })
         if (customer) {
           const debit = 0
           const credit = order.paymentMethod !== "cod" ? order.total : 0
@@ -152,12 +154,12 @@ export async function POST(request: Request) {
           const newBalance = (customer.balance || 0) - refundAmount
           
           await customersColl.updateOne(
-            { _id: customer._id },
+            { _id: customer._id as any },
             { $set: { balance: newBalance } }
           )
         }
       }
-      await ordersColl.updateOne({ _id: orderId }, { $set: { status: "cancelled" } })
+      await ordersColl.updateOne({ _id: orderId as any }, { $set: { status: "cancelled" } })
     } else {
       return NextResponse.json({ ok: false, error: "Invalid action" }, { status: 400 })
     }

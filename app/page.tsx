@@ -2,16 +2,82 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Leaf, Truck, Shield, Phone, MapPin, ArrowRight, Star, ChevronRight, Newspaper } from "lucide-react"
+import { Leaf, Truck, Shield, Phone, MapPin, ArrowRight, Star, ChevronRight, Newspaper, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Header } from "@/components/header"
 import { GTLogo } from "@/components/gt-logo"
 import { ProductsBrowse } from "@/components/products-browse"
 import { useCart } from "@/context/cart-context"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { useAuth } from "@/context/auth-context"
+import { useCropRates } from "@/context/crop-rates-context"
+
+function CropRatesMarquee() {
+  const { cropRates } = useCropRates()
+  const activeRates = cropRates.filter(cr => cr.isActive)
+  
+  if (!activeRates || activeRates.length === 0) {
+    return (
+      <div className="animate-marquee flex whitespace-nowrap">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="mx-4 flex items-center gap-8">
+            {["WHEAT", "RICE", "COTTON", "SUGARCANE", "MAIZE"].map((item) => (
+              <span
+                key={item}
+                className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wider text-emerald-100/90 transition-colors hover:text-white"
+              >
+                {item}
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_oklch(0.72_0.14_158_/_0.8)]" />
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="animate-marquee flex whitespace-nowrap">
+      {[...Array(2)].map((_, i) => (
+        <div key={i} className="mx-4 flex items-center gap-8">
+          {activeRates.map((rate) => (
+            <span
+              key={rate.id}
+              className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wider text-emerald-100/90 transition-colors hover:text-white"
+            >
+              {rate.name} (Rs. {rate.rate.toLocaleString()}/maund)
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_oklch(0.72_0.14_158_/_0.8)]" />
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function ShopContent() {
   const { totalItems } = useCart()
+  const { isAuthenticated, isCustomerAuthenticated } = useAuth()
+
+  const footerLinks = isAuthenticated
+    ? [
+        { href: "/products", label: "Products" },
+        { href: "/inventory", label: "Stock" },
+        { href: "/shop-finance", label: "Finance" },
+        { href: "/ledger", label: "Ledgers" },
+        { href: "/customers", label: "Customers" },
+        { href: "/staff", label: "Staff" },
+        { href: "/cart", label: "Cart" },
+      ]
+    : [
+        { href: "/products", label: "Products" },
+        { href: "/contact", label: "Contact" },
+        { href: "/staff", label: "Staff Portal" },
+        { href: "/cart", label: "Cart" },
+      ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -179,23 +245,9 @@ function ShopContent() {
         </div>
       </section>
 
-      {/* Marquee Section */}
+      {/* Crop Rates Marquee Section */}
       <section className="overflow-hidden border-y border-emerald-900/15 bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-950 py-4">
-        <div className="animate-marquee flex whitespace-nowrap">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="mx-4 flex items-center gap-8">
-              {["DAP", "UREA", "POTASH", "NP", "CAN", "SSP", "ZINC", "ORGANIC"].map((item) => (
-                <span
-                  key={item}
-                  className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wider text-emerald-100/90 transition-colors hover:text-white"
-                >
-                  {item}
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_oklch(0.72_0.14_158_/_0.8)]" />
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
+        <CropRatesMarquee />
       </section>
 
       {/* What we provide — short blog-style intro (shop remains home) */}
@@ -266,6 +318,57 @@ function ShopContent() {
       </section>
 
       <ProductsBrowse variant="home" />
+
+      {/* Farmers' Blog & Guidelines (Always visible, great SEO value!) */}
+      <section className="py-20 bg-secondary/20 border-t border-border/40">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center animate-fade-in-up">
+            <Badge variant="secondary" className="rounded-full px-4 py-1 mb-3">Farmers' Corner</Badge>
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+              Crop Calendars & Fertilizer Application Guidelines
+            </h2>
+            <p className="text-muted-foreground mt-2 text-lg max-w-2xl mx-auto">
+              Get the best harvest with correct fertilizer timing and combinations recommended by agriculture experts.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {[
+              {
+                title: "Wheat Fertilizer Guide (Rabi Season)",
+                crop: "Wheat (گندم)",
+                desc: "Apply 1 bag of DAP and 1/2 bag of Potash during sowing. Top-dress with 1 bag of Urea during the first watering (irrigation) and another bag of Urea during tillering for optimum yield.",
+                tip: "Do not apply nitrogen (Urea) late in the season to avoid lodging."
+              },
+              {
+                title: "Rice Nutrient Management (Kharif Season)",
+                crop: "Basmati Rice (دھان)",
+                desc: "Apply Zinc Sulphate 33% (10kg per acre) 15-20 days after transplanting. Top-dress with Urea in two split doses (early vegetative and tillering stages) to enhance green canopy.",
+                tip: "Phosphate (DAP) must be fully incorporated during puddling / land preparation."
+              },
+              {
+                title: "Maize High Yield Schedule",
+                crop: "Corn / Maize (مکئی)",
+                desc: "Maize is a heavy nitrogen feeder. Plan for split applications: DAP at planting, followed by 3 split doses of Urea at knee-high phase, tasseling phase, and grain fill stage.",
+                tip: "Incorporate organic compost to improve soil water-holding capacity."
+              }
+            ].map((article, idx) => (
+              <Card key={idx} className="rounded-3xl border border-border/50 bg-card overflow-hidden hover-lift transition duration-300 animate-fade-in-up">
+                <CardHeader className="bg-secondary/40 pb-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">{article.crop}</span>
+                  <CardTitle className="text-xl font-bold mt-1">{article.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <p className="text-sm leading-relaxed text-muted-foreground">{article.desc}</p>
+                  <div className="bg-primary/5 p-3.5 rounded-2xl border border-primary/10 text-xs text-foreground/90 font-medium">
+                    <strong>Pro-Tip:</strong> {article.tip}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="relative overflow-hidden border-y border-emerald-900/20 py-20 text-primary-foreground">
@@ -349,20 +452,12 @@ function ShopContent() {
                 <li className="hover:text-sidebar-primary transition-colors cursor-pointer">Galla Mandi, Arifwala</li>
               </ul>
             </div>
-            
+
             {/* Links */}
             <div className="animate-fade-in-up stagger-2">
               <h4 className="font-bold text-lg mb-6">Quick Links</h4>
               <ul className="space-y-4">
-                {[
-                  { href: "/products", label: "Products" },
-                  { href: "/shop-finance", label: "Finance" },
-                  { href: "/contact", label: "Contact" },
-                  { href: "/ledger", label: "Ledgers" },
-                  { href: "/customers", label: "Customers" },
-                  { href: "/staff", label: "Staff" },
-                  { href: "/cart", label: "Cart" },
-                ].map((link) => (
+                {footerLinks.map((link) => (
                   <li key={link.href}>
                     <Link 
                       href={link.href} 

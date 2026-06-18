@@ -50,7 +50,7 @@ export function ProductCard({
     >
       <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-gradient-to-br from-secondary via-muted/80 to-accent/10 transition-all duration-500 group-hover:from-secondary group-hover:to-accent/20">
         <ProductImage
-          src={product.image}
+          src={product.image || (product as any).images?.[0]}
           alt={product.name}
           className="transition-transform duration-500 group-hover:scale-105"
           priority={index < 4}

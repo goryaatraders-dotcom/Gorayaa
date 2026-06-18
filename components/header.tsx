@@ -9,24 +9,46 @@ import { Badge } from "@/components/ui/badge"
 import { GTLogo } from "@/components/gt-logo"
 import { cn } from "@/lib/utils"
 
+import { useAuth } from "@/context/auth-context"
+
 interface HeaderProps {
   cartCount?: number
 }
 
-const navItems = [
-  { href: "/", label: "Shop" },
-  { href: "/products", label: "Products" },
-  { href: "/inventory", label: "Stock" },
-  { href: "/shop-finance", label: "Finance" },
-  { href: "/ledger", label: "Ledgers" },
-  { href: "/customers", label: "Customers" },
-  { href: "/staff", label: "Staff" },
-  { href: "/contact", label: "Contact" },
-] as const
-
 export function Header({ cartCount = 0 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { isAuthenticated, isCustomerAuthenticated, currentCustomer, currentUser, logout, logoutCustomer } = useAuth()
+
+  const navItems = isAuthenticated
+    ? [
+        { href: "/", label: "Shop" },
+        { href: "/products", label: "Products" },
+        { href: "/market-prediction", label: "Market Predictions" },
+        { href: "/weather", label: "Weather" },
+        { href: "/inventory", label: "Stock" },
+        { href: "/shop-finance", label: "Finance" },
+        { href: "/ledger", label: "Ledgers" },
+        { href: "/customers", label: "Customers" },
+        { href: "/staff", label: "Staff" },
+        { href: "/contact", label: "Contact" },
+      ]
+    : isCustomerAuthenticated
+    ? [
+        { href: "/", label: "Shop" },
+        { href: "/products", label: "Products" },
+        { href: "/market-prediction", label: "Market Predictions" },
+        { href: "/weather", label: "Weather" },
+        { href: "/track", label: "Track Order" },
+        { href: "/contact", label: "Contact" },
+      ]
+    : [
+        { href: "/", label: "Shop" },
+        { href: "/products", label: "Products" },
+        { href: "/market-prediction", label: "Market Predictions" },
+        { href: "/weather", label: "Weather" },
+        { href: "/contact", label: "Contact" },
+      ]
 
   const linkClass = (href: string) =>
     cn(
@@ -74,21 +96,50 @@ export function Header({ cartCount = 0 }: HeaderProps) {
               </Button>
             </Link>
 
-            <Link href="/ledger" className="hidden sm:block">
-              <Button className="rounded-full gap-2 group h-11 px-4 font-medium lg:h-12 lg:px-6">
-                <BookOpen className="h-4 w-4 shrink-0" />
-                <span className="hidden lg:inline">Ledgers</span>
-                <span className="lg:hidden">Books</span>
-                <ArrowRight className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
-              </Button>
-            </Link>
-
-            <Link href="/staff" className="hidden md:block">
-              <Button variant="outline" className="rounded-full gap-2 h-11 px-4 font-medium lg:h-12 lg:px-5 border-border/80">
-                <Users className="h-4 w-4" />
-                Staff
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <div className="hidden md:flex items-center gap-2">
+                <Link href="/ledger" className="hidden sm:block">
+                  <Button className="rounded-full gap-2 group h-11 px-4 font-medium lg:h-12 lg:px-5">
+                    <BookOpen className="h-4 w-4 shrink-0" />
+                    <span>Ledgers</span>
+                  </Button>
+                </Link>
+                <Link href="/staff" className="hidden sm:block">
+                  <Button variant="outline" className="rounded-full gap-2 h-11 px-4 font-medium lg:h-12 lg:px-4 border-border/80">
+                    <Users className="h-4 w-4" />
+                    Staff
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={logout} 
+                  className="rounded-full h-11 px-4 text-xs font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : isCustomerAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-3 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  👋 {currentCustomer?.name.split(" ")[0]}
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={logoutCustomer} 
+                  className="rounded-full h-11 px-4 text-xs font-semibold hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login">
+                <Button variant="outline" className="rounded-full h-11 px-5 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground font-semibold">
+                  Sign In
+                </Button>
+              </Link>
+            )}
 
             <Button
               variant="ghost"

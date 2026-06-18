@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
-import { seedProducts, staffMembers, customers, ledgerEntriesByBook } from "@/lib/data"
+import { seedProducts, staffMembers, customers, ledgerEntriesByBook, seedOrders, seedCropRates } from "@/lib/data"
 
 export async function GET(request: Request) {
   try {
@@ -72,6 +72,32 @@ export async function GET(request: Request) {
       }
     }
 
+    // 5. Seed Orders
+    const ordersColl = db.collection("orders")
+    const existingOrders = await ordersColl.countDocuments()
+    if (force || existingOrders === 0) {
+      if (force) await ordersColl.deleteMany({})
+      await ordersColl.insertMany(
+        seedOrders.map(o => ({
+          ...o,
+          _id: o.id as any,
+        }))
+      )
+    }
+
+    // 6. Seed Crop Rates
+    const cropRatesColl = db.collection("crop-rates")
+    const existingCropRates = await cropRatesColl.countDocuments()
+    if (force || existingCropRates === 0) {
+      if (force) await cropRatesColl.deleteMany({})
+      await cropRatesColl.insertMany(
+        seedCropRates.map(cr => ({
+          ...cr,
+          _id: cr.id as any,
+        }))
+      )
+    }
+
     return NextResponse.json({
       ok: true,
       message: "Database seeded successfully",
@@ -80,6 +106,8 @@ export async function GET(request: Request) {
         staff: await staffColl.countDocuments(),
         customers: await customersColl.countDocuments(),
         ledgers: await ledgersColl.countDocuments(),
+        orders: await ordersColl.countDocuments(),
+        cropRates: await cropRatesColl.countDocuments(),
       }
     })
   } catch (error: any) {

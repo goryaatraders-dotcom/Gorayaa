@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -19,7 +18,6 @@ export function ProductImage({
   alt,
   className,
   iconClassName,
-  sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw",
   priority = false,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false)
@@ -33,13 +31,11 @@ export function ProductImage({
   }
 
   return (
-    <Image
+    <img
       src={src}
       alt={alt}
-      fill
-      sizes={sizes}
-      priority={priority}
-      className={cn("object-cover", className)}
+      className={cn("object-cover w-full h-full absolute inset-0", className)}
+      loading={priority ? "eager" : "lazy"}
       onError={() => setFailed(true)}
     />
   )

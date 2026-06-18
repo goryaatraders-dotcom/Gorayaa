@@ -58,9 +58,13 @@ interface LedgerBookContentProps {
 export function LedgerBookContent({ bookId }: LedgerBookContentProps) {
   const bookMeta = ledgerBooks.find((b) => b.id === bookId)!
   const [searchQuery, setSearchQuery] = useState("")
-  const entries = ledgerEntriesByBook[bookId]
-  const [filterType, setFilterType] = useState<"all" | "sale" | "payment" | "return">("all")
-  const [filterSaleType, setFilterSaleType] = useState<"all" | SaleType>("all")
+  const [entries, setEntries] = useState<LedgerEntry[]>(ledgerEntriesByBook[bookId] || [])
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [newCustomerId, setNewCustomerId] = useState("")
+  const [newType, setNewType] = useState<"sale" | "payment" | "return">("sale")
+  const [newSaleType, setNewSaleType] = useState<SaleType>("cash")
+  const [newAmount, setNewAmount] = useState("")
+  const [newDescription, setNewDescription] = useState("")
 
   const filteredEntries = entries.filter((entry) => {
     const matchesSearch =
@@ -70,6 +74,41 @@ export function LedgerBookContent({ bookId }: LedgerBookContentProps) {
     const matchesSaleType = filterSaleType === "all" || entry.saleType === filterSaleType
     return matchesSearch && matchesType && (entry.type !== "sale" || matchesSaleType)
   })
+
+  const handleAddEntry = () => {
+    if (!newCustomerId || !newAmount || !newDescription) {
+      alert("Please fill all required fields")
+      return
+    }
+    const customer = customers.find(c => c.id === newCustomerId)
+    if (!customer) return
+
+    const debit = newType === "sale" ? Number(newAmount) : 0
+    const credit = (newType === "payment" || newType === "return") ? Number(newAmount) : 0
+
+    // Calculate running balance (simplified for local demo)
+    const currentBalance = entries.length > 0 ? entries[0].balance : 0
+    const balance = currentBalance + debit - credit
+
+    const newEntry: LedgerEntry = {
+      id: `entry-${Date.now()}`,
+      customerId: newCustomerId,
+      customerName: customer.name,
+      date: new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }),
+      type: newType,
+      saleType: newType === "sale" ? newSaleType : undefined,
+      description: newDescription,
+      debit,
+      credit,
+      balance
+    }
+
+    setEntries([newEntry, ...entries])
+    setIsAddOpen(false)
+    setNewAmount("")
+    setNewDescription("")
+    setNewCustomerId("")
+  }
 
   const totalDebit = entries.reduce((sum, entry) => sum + entry.debit, 0)
   const totalCredit = entries.reduce((sum, entry) => sum + entry.credit, 0)
@@ -214,7 +253,7 @@ export function LedgerBookContent({ bookId }: LedgerBookContentProps) {
             <h1 className="text-4xl lg:text-5xl font-black text-foreground tracking-tight">{bookMeta.name}</h1>
             <p className="text-muted-foreground mt-2 text-lg max-w-2xl">{bookMeta.description}</p>
           </div>
-          <Dialog>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button size="lg" className="gap-2 rounded-full h-12 px-6">
                 <Plus className="h-5 w-5" />
@@ -232,7 +271,11 @@ export function LedgerBookContent({ bookId }: LedgerBookContentProps) {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Customer / Party</Label>
-                  <select className="w-full p-3 rounded-xl border border-input bg-background">
+                  <select 
+                    className="w-full p-3 rounded-xl border border-input bg-background"
+                    value={newCustomerId}
+                    onChange={(e) => setNewCustomerId(e.target.value)}
+                  >
                     <option value="">Select…</option>
                     {customers.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -243,16 +286,24 @@ export function LedgerBookContent({ bookId }: LedgerBookContentProps) {
                 </div>
                 <div className="space-y-2">
                   <Label>Transaction Type</Label>
-                  <select className="w-full p-3 rounded-xl border border-input bg-background">
+                  <select 
+                    className="w-full p-3 rounded-xl border border-input bg-background"
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as any)}
+                  >
                     <option value="sale">Charge / Sale</option>
                     <option value="payment">Payment</option>
                     <option value="return">Return</option>
                   </select>
                 </div>
-                {showSaleTypeBreakdown && (
+                {showSaleTypeBreakdown && newType === "sale" && (
                   <div className="space-y-2">
                     <Label>Sale Type (for sales only)</Label>
-                    <select className="w-full p-3 rounded-xl border border-input bg-background">
+                    <select 
+                      className="w-full p-3 rounded-xl border border-input bg-background"
+                      value={newSaleType}
+                      onChange={(e) => setNewSaleType(e.target.value as any)}
+                    >
                       {saleTypes.map((type) => (
                         <option key={type.id} value={type.id}>
                           {type.name} - {type.nameUrdu}
@@ -263,18 +314,29 @@ export function LedgerBookContent({ bookId }: LedgerBookContentProps) {
                 )}
                 <div className="space-y-2">
                   <Label>Amount (Rs.)</Label>
-                  <Input type="number" placeholder="0" className="h-12 rounded-xl" />
+                  <Input 
+                    type="number" 
+                    placeholder="0" 
+                    className="h-12 rounded-xl"
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Input placeholder="Enter description…" className="h-12 rounded-xl" />
+                  <Input 
+                    placeholder="Enter description…" 
+                    className="h-12 rounded-xl"
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                  />
                 </div>
               </div>
               <DialogFooter className="gap-2">
-                <Button variant="outline" className="rounded-full">
+                <Button variant="outline" className="rounded-full" onClick={() => setIsAddOpen(false)}>
                   Cancel
                 </Button>
-                <Button className="rounded-full">Add Entry</Button>
+                <Button className="rounded-full" onClick={handleAddEntry}>Add Entry</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
